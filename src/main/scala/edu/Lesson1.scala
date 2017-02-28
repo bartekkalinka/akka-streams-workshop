@@ -5,7 +5,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Keep, Sink, Source}
 
 import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 //introduction
 case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterializer) {
@@ -29,6 +29,7 @@ case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterial
   }
 
   //using given stream blueprint twice, but using Sink.foreach materialization to sequence the executions
+  //(I'll explain materialization later)
   def example3() = {
     import system.dispatcher //for futures' execution context
     val stream = Source(List(1, 2)).toMat(Sink.foreach(println))(Keep.right)
@@ -41,10 +42,22 @@ case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterial
     )
   }
 
+  //simple sources
+  def example4() = {
+    val stream1 = Source.single(1).to(Sink.foreach(println))
+    val stream2 = Source.repeat(1).take(5).to(Sink.foreach(println))
+    val iterator = Iterator.from(1)
+    val stream3 = Source.fromIterator(() => iterator).take(5).to(Sink.foreach(println))
+    val stream4 = Source.tick(0.seconds, 100.millis, "a").to(Sink.foreach(println))
+    stream3.run
+    //TODO run other streams, one at a time
+  }
+
   def call(example: Int) = example match {
     case 1 => example1()
     case 2 => example2()
     case 3 => example3()
+    case 4 => example4()
     case _ => println("wrong example")
   }
 }
