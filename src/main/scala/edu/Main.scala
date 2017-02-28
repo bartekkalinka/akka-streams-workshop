@@ -7,7 +7,7 @@ object Main extends App {
   implicit val system = ActorSystem("Lesson1")
   implicit val materializer = ActorMaterializer()
 
-  val call = "1.2"
+  val call = "1.3"
 
   val Array(lesson, example) = call.split('.').map(_.toInt)
 
