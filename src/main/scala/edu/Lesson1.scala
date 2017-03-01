@@ -3,7 +3,7 @@ package edu
 import akka.{Done, NotUsed}
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Keep, RunnableGraph, Sink, Source}
+import akka.stream.scaladsl.{Flow, Keep, RunnableGraph, Sink, Source}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -13,9 +13,11 @@ case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterial
 
   //first stream
   def example1() = {
-    //a source build from 3-elements list
+    //source: something with output
+    //this source build from 3-elements list
     //(type of outgoing single element is Int, materialization type is NotUsed)
     val source: Source[Int, NotUsed] = Source(List(1, 2, 3))
+    //sink: something with input
     //a sink that prints out incoming elements
     //(type of incoming element may be Any, materialization type is Future[Done])
     val sink: Sink[Any, Future[Done]] = Sink.foreach(println)
@@ -58,11 +60,24 @@ case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterial
     //TODO run other streams, one at a time
   }
 
+  //flow
+  def example5() = {
+    //flow: something with input and output
+    //type of incoming element is Int, type of outgoing element is Int, materialization type is NotUsed
+    //Flow[Int](.apply) is a helper constructor to create a Flow[Int, Int, ...] which outputs all inputs without modification
+    val flow: Flow[Int, Int, NotUsed] = Flow[Int].map(_ + 1)
+    val source = Source(List(1, 2, 3))
+    val sink = Sink.foreach(println)
+    val stream = source.via(flow).to(sink)
+    stream.run
+  }
+
   def call(example: Int) = example match {
     case 1 => example1()
     case 2 => example2()
     case 3 => example3()
     case 4 => example4()
+    case 5 => example5()
     case _ => println("wrong example")
   }
 }
