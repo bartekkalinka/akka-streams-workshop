@@ -1,10 +1,11 @@
 package edu
 
+import akka.{Done, NotUsed}
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Keep, Sink, Source}
+import akka.stream.scaladsl.{Keep, RunnableGraph, Sink, Source}
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 //introduction
@@ -12,11 +13,15 @@ case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterial
 
   //first stream
   def example1() = {
-    //stream blueprint, nothing running yet
     //a source build from 3-elements list
-    //connected to
-    //a sink that for each incoming element prints it out
-    val stream = Source(List(1, 2, 3)).to(Sink.foreach(println))
+    //(type of outgoing single element is Int, materialization type is NotUsed)
+    val source: Source[Int, NotUsed] = Source(List(1, 2, 3))
+    //a sink that prints out incoming elements
+    //(type of incoming element may be Any, materialization type is Future[Done])
+    val sink: Sink[Any, Future[Done]] = Sink.foreach(println)
+    //stream blueprint, nothing running yet
+    //(materialization type of whole graph is NotUsed)
+    val stream: RunnableGraph[NotUsed] = source.to(sink)
     //running the stream
     stream.run
   }
@@ -29,10 +34,10 @@ case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterial
   }
 
   //using given stream blueprint twice, but using Sink.foreach materialization to sequence the executions
-  //(I'll explain materialization later)
   def example3() = {
     import system.dispatcher //for futures' execution context
-    val stream = Source(List(1, 2)).toMat(Sink.foreach(println))(Keep.right)
+    //materialization type of whole graph is taken from Sink.foreach stage
+    val stream: RunnableGraph[Future[Done]] = Source(List(1, 2)).toMat(Sink.foreach(println))(Keep.right)
     Await.result(
       for {
         _ <- stream.run
