@@ -72,12 +72,26 @@ case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterial
     stream.run
   }
 
+  //source and sink from flow
+  def example6() = {
+    val flowToStr: Flow[Int, String, NotUsed] = Flow[Int].map(_.toString + "0")
+    //notice the types: Source[Int, ...] via Flow[Int, String, ...] becomes Source[String, ...]
+    val source: Source[String, NotUsed] = Source(List(1, 2, 3)).via(flowToStr)
+    //another way to construct flow: fromFunction
+    val flowFromString: Flow[String, Int, NotUsed] = Flow.fromFunction(_.toInt)
+    //notice the types: Flow[String, Int, ...] to Sink[Any, ...] becomes Sink[String, ...]
+    val sink: Sink[String, NotUsed] = flowFromString.to(Sink.foreach(println))
+    val stream = source.to(sink)
+    stream.run
+  }
+
   def call(example: Int) = example match {
     case 1 => example1()
     case 2 => example2()
     case 3 => example3()
     case 4 => example4()
     case 5 => example5()
+    case 6 => example6()
     case _ => println("wrong example")
   }
 }
