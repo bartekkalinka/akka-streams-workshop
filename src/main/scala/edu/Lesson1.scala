@@ -85,6 +85,15 @@ case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterial
     stream.run
   }
 
+  //flow from sink and source
+  def example7() = {
+    //input of the flow is made from a sink, and output is made from source
+    //the sink and source are not connected to each other
+    val flow: Flow[Any, Int, NotUsed] = Flow.fromSinkAndSource(Sink.ignore, Source(List(5, 6, 7)))
+    val stream = Source.repeat("aaa").via(flow).to(Sink.foreach(println))
+    stream.run
+  }
+
   def call(example: Int) = example match {
     case 1 => example1()
     case 2 => example2()
@@ -92,6 +101,7 @@ case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterial
     case 4 => example4()
     case 5 => example5()
     case 6 => example6()
+    case 7 => example7()
     case _ => println("wrong example")
   }
 }
