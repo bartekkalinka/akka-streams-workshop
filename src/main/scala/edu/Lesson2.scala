@@ -1,11 +1,13 @@
 package edu
 
+import java.util.concurrent.TimeUnit
+
 import akka.Done
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, ThrottleMode}
 import akka.stream.scaladsl.{Keep, RunnableGraph, Sink, Source}
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 //more operations on Source/Flow
@@ -93,6 +95,20 @@ case class Lesson2(implicit val system: ActorSystem, materializer: ActorMaterial
     Await.result(stream.run, Duration.Inf)
   }
 
+  //throttle - passing 1 element per specificic time interval
+  def example9() = {
+    //below example behaves basically like Source.tick with interval of 1 second:
+    val stream = Source(List(1, 2, 3)).throttle(1, 1.seconds, 1, ThrottleMode.shaping).toMat(Sink.foreach(println))(Keep.right)
+    Await.result(stream.run, Duration.Inf)
+  }
+
+  //exercise 1: use throttle to make stream ordered even with mapAsyncUnordered (in code from example8)
+  //run with sbt "run 2.11"
+  def exercise10() = {
+    //modify below code, add throttle:
+    val stream: RunnableGraph[Future[Done]] = Source(List(3, 2, 1, 3, 2, 1)).mapAsyncUnordered(3)(callRemoteService).toMat(Sink.foreach(println))(Keep.right)
+    Await.result(stream.run, Duration.Inf)
+  }
 
   def call(example: Int) = example match {
     case 1 => example1()
@@ -103,6 +119,8 @@ case class Lesson2(implicit val system: ActorSystem, materializer: ActorMaterial
     case 6 => example6()
     case 7 => example7()
     case 8 => example8()
+    case 9 => example9()
+    case 10 => exercise10()
     case _ => println("wrong example")
   }
 }
