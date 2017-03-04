@@ -30,17 +30,17 @@ case class Lesson2(implicit val system: ActorSystem, materializer: ActorMaterial
     stream.run
   }
 
-  //TODO stdin source without need to press enter
+  //scan: modifying position according to directions
   def example4() = {
-    val charactersPressedByUser = Source.fromIterator(() => io.Source.stdin.iter)
-    def modifyPosition(char: Char, position: (Int, Int)): (Int, Int) = (char, position) match {
-      case ('a', (x, y)) => (x - 1, y)
-      case ('d', (x, y)) => (x + 1, y)
-      case ('s', (x, y)) => (x, y + 1)
-      case ('w', (x, y)) => (x, y - 1)
+    val directions = Source("nsseewnn".toList)
+    val modifyPosition: ((Int, Int), Char) => (Int, Int) = {
+      case ((x, y), 'n') => (x - 1, y)
+      case ((x, y), 's') => (x + 1, y)
+      case ((x, y), 'e') => (x, y + 1)
+      case ((x, y), 'w') => (x, y - 1)
     }
-    val stream = charactersPressedByUser
-      .scan((0, 0)) { case (position, char) => modifyPosition(char, position) }
+    val stream = directions
+      .scan((0, 0))(modifyPosition)
       .to(Sink.foreach(println))
     stream.run
   }
