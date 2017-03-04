@@ -106,7 +106,9 @@ case class Lesson2(implicit val system: ActorSystem, materializer: ActorMaterial
   //run with sbt "run 2.11"
   def exercise10() = {
     //modify below code, add throttle:
-    val stream: RunnableGraph[Future[Done]] = Source(List(3, 2, 1, 3, 2, 1)).mapAsyncUnordered(3)(callRemoteService).toMat(Sink.foreach(println))(Keep.right)
+    val stream: RunnableGraph[Future[Done]] = Source(List(3, 2, 1, 3, 2, 1))
+      .throttle(1, 1.seconds, 1, ThrottleMode.shaping)
+      .mapAsyncUnordered(3)(callRemoteService).toMat(Sink.foreach(println))(Keep.right)
     Await.result(stream.run, Duration.Inf)
   }
 
