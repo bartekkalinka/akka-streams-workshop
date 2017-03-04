@@ -1,11 +1,16 @@
 package edu
 
+import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{Keep, RunnableGraph, Sink, Source}
+
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 //more operations on Source/Flow
 case class Lesson2(implicit val system: ActorSystem, materializer: ActorMaterializer) {
+  import system.dispatcher
 
   //filter
   def example1() = {
@@ -45,14 +50,59 @@ case class Lesson2(implicit val system: ActorSystem, materializer: ActorMaterial
     stream.run
   }
 
+  val map = Map(1 -> "1. tiger", 2 -> "2. lion", 3 -> "3. zebra")
+
+  //dummy "remote" service, which delays the answer by elem * 200 milliseconds
+  def callRemoteService(elem: Int): Future[String] = Future {
+    println(s"start serving call for $elem")
+    Thread.sleep(elem * 200)
+    println(s"finished serving call for $elem")
+    map(elem)
+  }
+
+  //mapAsync
+  def example5() = {
+    //processing serveral elements through remote service call
+    //mapAsync(1) means parallelism = 1
+    //you can observe that there is one call at a time
+    //toMat(Sink.foreach(println))(Keep.right) is needed to obtain Future[Done] during materialization
+    //so we can await stream completion
+    val stream: RunnableGraph[Future[Done]] = Source(List(3, 2, 1, 3, 2, 1)).mapAsync(1)(callRemoteService).toMat(Sink.foreach(println))(Keep.right)
+    Await.result(stream.run, Duration.Inf)
+  }
+
+  //mapAsync with higher level of parallelism
+  def example6() = {
+    //now, with mapAsync(2) you can observe that remote service calls are processed in parallel
+    //the results are still printed in order by which they came out of the source
+    val stream: RunnableGraph[Future[Done]] = Source(List(3, 2, 1, 3, 2, 1)).mapAsync(2)(callRemoteService).toMat(Sink.foreach(println))(Keep.right)
+    Await.result(stream.run, Duration.Inf)
+  }
+
+  //mapAsyncUnordered(2)
+  def example7() = {
+    //mapAsyncUnordered doesn't have to keep order on output
+    val stream: RunnableGraph[Future[Done]] = Source(List(3, 2, 1, 3, 2, 1)).mapAsyncUnordered(2)(callRemoteService).toMat(Sink.foreach(println))(Keep.right)
+    Await.result(stream.run, Duration.Inf)
+  }
+
+  //mapAsyncUnordered(3)
+  def example8() = {
+    //even higher level of parallelism
+    val stream: RunnableGraph[Future[Done]] = Source(List(3, 2, 1, 3, 2, 1)).mapAsyncUnordered(3)(callRemoteService).toMat(Sink.foreach(println))(Keep.right)
+    Await.result(stream.run, Duration.Inf)
+  }
+
+
   def call(example: Int) = example match {
     case 1 => example1()
     case 2 => example2()
     case 3 => example3()
     case 4 => example4()
-//    case 5 => example5()
-//    case 6 => example6()
-//    case 7 => example7()
+    case 5 => example5()
+    case 6 => example6()
+    case 7 => example7()
+    case 8 => example8()
     case _ => println("wrong example")
   }
 }
