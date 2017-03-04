@@ -13,6 +13,7 @@ object Main extends App {
 
   lesson match {
     case 1 => Lesson1().call(example)
+    case 2 => Lesson2().call(example)
     case _ => "wrong lesson"
   }
 
