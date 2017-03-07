@@ -1,7 +1,5 @@
 package edu
 
-import java.util.concurrent.TimeUnit
-
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ThrottleMode}
