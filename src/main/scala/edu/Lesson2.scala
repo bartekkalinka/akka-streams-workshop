@@ -52,14 +52,14 @@ case class Lesson2(implicit val system: ActorSystem, materializer: ActorMaterial
     stream.run
   }
 
-  val map = Map(1 -> "1. tiger", 2 -> "2. lion", 3 -> "3. zebra")
+  val animalsMap = Map(1 -> "1. tiger", 2 -> "2. lion", 3 -> "3. zebra")
 
-  //dummy "remote" service, which delays the answer by elem * 200 milliseconds
+  //dummy "remote" service call, which delays the answer by elem * 200 milliseconds
   def callRemoteService(elem: Int): Future[String] = Future {
-    println(s"start serving call for $elem")
+    println(s"start call for $elem")
     Thread.sleep(elem * 200)
-    println(s"finished serving call for $elem")
-    map(elem)
+    println(s"finished call for $elem")
+    animalsMap(elem)
   }
 
   //mapAsync
@@ -109,6 +109,8 @@ case class Lesson2(implicit val system: ActorSystem, materializer: ActorMaterial
     val stream: RunnableGraph[Future[Done]] = Source(List(3, 2, 1, 3, 2, 1)).mapAsyncUnordered(3)(callRemoteService).toMat(Sink.foreach(println))(Keep.right)
     Await.result(stream.run, Duration.Inf)
   }
+
+  //TODO more exercises
 
   def call(example: Int) = example match {
     case 1 => example1()
