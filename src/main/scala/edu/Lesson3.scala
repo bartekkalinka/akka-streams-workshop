@@ -22,8 +22,9 @@ case class Lesson3(implicit val system: ActorSystem, materializer: ActorMaterial
     syncCall(delay)(elem)
   }
 
-  //TODO better illustration of two concurrent flows
-  //TODO simpler examples
+  //Graph dsl - here you can take elements/stages and connect them with arrows
+  //to achieve more complex graphs than linear flow from source to sink.
+  //the source broadcast into 2 flows, then merged into one sink
   def example1() = {
     val graph = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
       import GraphDSL.Implicits._
@@ -48,20 +49,20 @@ case class Lesson3(implicit val system: ActorSystem, materializer: ActorMaterial
       import GraphDSL.Implicits._
       val in = Source(1 to 3)
 
-      //val bcast = builder.add(Broadcast[Int](2))
+      val bcast = builder.add(Broadcast[Int](2))
       val merge = builder.add(Merge[Int](2))
 
-      val flow1 = in.map(syncCall(1))
-      val flow2 = in.map(syncCall(4))
+      val flow1 = Flow[Int].mapAsync(1)(asyncCall(1))
+      val flow2 = Flow[Int].mapAsync(1)(asyncCall(4))
 
-      //in ~> bcast ~>
-      flow1 ~> merge
-      //bcast ~>
-      flow2 ~> merge
+      in ~> bcast ~> flow1 ~> merge
+      bcast ~> flow2 ~> merge
       SourceShape(merge.out)
     })
     Await.result(source.toMat(Sink.foreach(println))(Keep.right).run, Duration.Inf)
   }
+
+  //TODO show simpler ways of merging sources and broadcasting to sinks with flow dsl
 
 
   def call(example: Int) = example match {
