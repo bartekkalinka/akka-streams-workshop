@@ -2,10 +2,10 @@ package edu
 
 import akka.{Done, NotUsed}
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ClosedShape, OverflowStrategy, SourceShape}
+import akka.stream._
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Keep, Merge, RunnableGraph, Sink, Source}
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 case class Lesson3(implicit val system: ActorSystem, materializer: ActorMaterializer) {
@@ -81,21 +81,54 @@ case class Lesson3(implicit val system: ActorSystem, materializer: ActorMaterial
   //(so the elements go to sink in order in which delays make them to)
   def exercise3() = ???
 
-  //TODO show simpler ways of merging sources and broadcasting to sinks with flow dsl
+  //Using alsoTo to broadcast one source to 2 sinks
+  //The second sink will be Sink.last, which returns last value processed before completion.
+  //To have access to materialization values we need to use alsoToMat version.
+  def example4() = {
+    val graph: RunnableGraph[(Future[Int], Future[Done])] = Source(1 to 3)
+      .alsoToMat(Sink.last)(Keep.right)
+      .toMat(Sink.foreach(println))(Keep.both) //Keep.both to keep both Sink.last and Sink.foreach materialization values
+    val (futureLast, futureDone) = graph.run
+    val (last, _) = Await.result(futureLast.zip(futureDone), Duration.Inf)
+    println(s"last value was $last")
+  }
 
-  //TODO alsoTo, merge, zip, Source.combine
+  //Merging another source with Flow.merge
+  def example5() = {
+    val fasterSource = Source(1 to 3).throttle(1, 100.millis, 1, ThrottleMode.shaping)
+    val slowerSource = Source(4 to 6).throttle(1, 300.millis, 1, ThrottleMode.shaping)
+    //merge combines 2 sources asynchronously, so faster source elements go through faster
+    val graph = fasterSource.via(Flow[Int].merge(slowerSource)).toMat(Sink.foreach(println))(Keep.right)
+    Await.result(graph.run, Duration.Inf)
+  }
+
+  //Combining sources with Flow.zip
+  def example6() = {
+    val fasterSource = Source(1 to 3).throttle(1, 100.millis, 1, ThrottleMode.shaping)
+    val slowerSource = Source(4 to 6).throttle(1, 300.millis, 1, ThrottleMode.shaping)
+    //zip combines 2 sources synchronously, so both sources elements go through at once (and are combined into pairs)
+    val graph = fasterSource.via(Flow[Int].zip(slowerSource)).toMat(Sink.foreach(println))(Keep.right)
+    Await.result(graph.run, Duration.Inf)
+  }
+
+  //Another way of doing same thing: Source.combine
+  def example7() = {
+    val fasterSource = Source(1 to 3).throttle(1, 100.millis, 1, ThrottleMode.shaping)
+    val slowerSource = Source(4 to 6).throttle(1, 300.millis, 1, ThrottleMode.shaping)
+    //Merge(_) parameter tells it to use merge instead of zip
+    val mergedSource = Source.combine(fasterSource, slowerSource)(Merge(_))
+    val graph = mergedSource.toMat(Sink.foreach(println))(Keep.right)
+    Await.result(graph.run, Duration.Inf)
+  }
 
   def call(example: Int) = example match {
     case 1 => example1()
     case 2 => example2()
     case 3 => exercise3()
-//    case 4 => example4()
-//    case 5 => example5()
-//    case 6 => example6()
-//    case 7 => example7()
-//    case 8 => example8()
-//    case 9 => example9()
-//    case 10 => exercise10()
+    case 4 => example4()
+    case 5 => example5()
+    case 6 => example6()
+    case 7 => example7()
     case _ => println("wrong example")
   }
 }
