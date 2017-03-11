@@ -100,7 +100,7 @@ case class Lesson2(implicit val system: ActorSystem, materializer: ActorMaterial
     Await.result(stream.run, Duration.Inf)
   }
 
-  //exercise 1: use throttle to make stream ordered even with mapAsyncUnordered (in code from example8)
+  //exercise: use throttle to make stream ordered even with mapAsyncUnordered (in code from example8)
   //run with sbt "run 2.11"
   def exercise10() = {
     //modify below code, add throttle:

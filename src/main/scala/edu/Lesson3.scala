@@ -2,7 +2,7 @@ package edu
 
 import akka.{Done, NotUsed}
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ClosedShape, SourceShape}
+import akka.stream.{ActorMaterializer, ClosedShape, OverflowStrategy, SourceShape}
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Keep, Merge, RunnableGraph, Sink, Source}
 
 import scala.concurrent.duration.Duration
@@ -77,12 +77,18 @@ case class Lesson3(implicit val system: ActorSystem, materializer: ActorMaterial
     Await.result(graph.run, Duration.Inf)
   }
 
+  //exercise: use Flow.buffer(3, OverflowStrategy.backpressure) to make both flows execute independently
+  //(so the elements go to sink in order in which delays make them to)
+  def exercise3() = ???
+
   //TODO show simpler ways of merging sources and broadcasting to sinks with flow dsl
+
+  //TODO alsoTo, merge, zip, Source.combine
 
   def call(example: Int) = example match {
     case 1 => example1()
     case 2 => example2()
-//    case 3 => example3()
+    case 3 => exercise3()
 //    case 4 => example4()
 //    case 5 => example5()
 //    case 6 => example6()
