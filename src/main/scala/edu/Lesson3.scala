@@ -79,7 +79,25 @@ case class Lesson3(implicit val system: ActorSystem, materializer: ActorMaterial
 
   //exercise: use Flow.buffer(3, OverflowStrategy.backpressure) to make both flows execute independently
   //(so the elements go to sink in order in which delays make them to)
-  def exercise3() = ???
+  def exercise3() = {
+    val source = Source.fromGraph(GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
+      import GraphDSL.Implicits._
+      val in = Source(1 to 3)
+
+      val bcast = builder.add(Broadcast[Int](2))
+      val merge = builder.add(Merge[Int](2))
+
+      //Flows use mapAsync
+      val flow1 = Flow[Int].mapAsync(1)(asyncCall(1))
+      val flow2 = Flow[Int].buffer(3, OverflowStrategy.backpressure).mapAsync(1)(asyncCall(4))
+
+      in ~> bcast ~> flow1 ~> merge
+      bcast ~> flow2 ~> merge
+      SourceShape(merge.out) //returning source shape this time, connected to Merge outlet
+    })
+    val graph: RunnableGraph[Future[Done]] = source.toMat(Sink.foreach(println))(Keep.right)
+    Await.result(graph.run, Duration.Inf)
+  }
 
   //TODO show simpler ways of merging sources and broadcasting to sinks with flow dsl
 
