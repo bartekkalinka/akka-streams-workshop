@@ -7,6 +7,7 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
+//flow dsl various
 case class Lesson4(implicit val system: ActorSystem, materializer: ActorMaterializer) {
 
   import system.dispatcher
@@ -58,14 +59,27 @@ case class Lesson4(implicit val system: ActorSystem, materializer: ActorMaterial
     Await.result(streamFuture, Duration.Inf)
   }
 
+  //demonstration of lack of backpressure in Source.actorRef
+  def example4() = {
+    val source = Source.actorRef[Any](1, OverflowStrategy.dropHead)
+    val mainStream = source
+      .collect{ case i: Int => i + 1 }
+      .throttle(1, 500.millis, 1, ThrottleMode.shaping)
+      .toMat(Sink.foreach(println))(Keep.both)
+    val (actorRef, streamFuture) = mainStream.run
+    //faster stream writes to slower stream through actorRef
+    val sendingFuture = Source(1 to 100)
+      .concat(Source.single(PoisonPill))
+      .throttle(1, 50.millis, 1, ThrottleMode.shaping)
+      .runWith(Sink.foreach(actorRef ! _))
+    Await.result(streamFuture.zip(sendingFuture), Duration.Inf)
+  }
+
   def call(example: Int) = example match {
     case 1 => example1()
     case 2 => example2()
     case 3 => example3()
-//    case 4 => example4()
-//    case 5 => example5()
-//    case 6 => example6()
-//    case 7 => example7()
+    case 4 => example4()
     case _ => println("wrong example")
   }
 }
