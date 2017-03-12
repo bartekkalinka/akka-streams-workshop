@@ -1,10 +1,11 @@
 package edu
 
 import akka.actor.{ActorSystem, PoisonPill, Status}
+import akka.pattern.Patterns
 import akka.stream.{ActorMaterializer, OverflowStrategy, ThrottleMode}
 import akka.stream.scaladsl.{Keep, Sink, Source}
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 case class Lesson4(implicit val system: ActorSystem, materializer: ActorMaterializer) {
@@ -40,15 +41,22 @@ case class Lesson4(implicit val system: ActorSystem, materializer: ActorMaterial
     println(wordcounts.toSeq.sortBy(-_._2).take(100))
   }
 
+  //inserting elements into stream's source by sending messages to an actor
   def example3() = {
+    //Source.actorRef has materialization value of type ActorRef
+    //it does not support backpressure, so we can only choose between other overflow strategies
     val source = Source.actorRef[Any](10, OverflowStrategy.dropHead)
     val stream = source.collect{ case i: Int => i + 1 }.toMat(Sink.foreach(println))(Keep.both)
-    val (actorRef, future) = stream.run
+    //actorRef is mat. value of Source.actorRef, streamFuture is mat. value of Sink.foreach
+    val (actorRef, streamFuture) = stream.run
     actorRef ! 1
     actorRef ! 2
     actorRef ! 3
-    actorRef ! Status.Success
-    Await.result(future, 3.seconds)
+    //we have to send poison pill to actor, otherwise streamFuture will hang indefinitely
+    //we have to send it with delay, otherwise the stream may fail to process its elements on time
+    //(actor's death means completion of the stream)
+    system.scheduler.scheduleOnce(1.second)(actorRef ! PoisonPill)
+    Await.result(streamFuture, Duration.Inf)
   }
 
   def call(example: Int) = example match {
