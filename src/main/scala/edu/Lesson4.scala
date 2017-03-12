@@ -1,11 +1,10 @@
 package edu
 
-import akka.actor.{ActorSystem, PoisonPill, Status}
-import akka.pattern.Patterns
+import akka.actor.{ActorSystem, PoisonPill}
 import akka.stream.{ActorMaterializer, OverflowStrategy, ThrottleMode}
 import akka.stream.scaladsl.{Keep, Sink, Source}
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 case class Lesson4(implicit val system: ActorSystem, materializer: ActorMaterializer) {
@@ -14,12 +13,12 @@ case class Lesson4(implicit val system: ActorSystem, materializer: ActorMaterial
 
   //example of using materialized value which is a control value, rather than Future of result
   //Source.tick has materialized value of type Cancellable
-  //we start another stream that returns Future[Done] to use it to signal the moment to cancel the first stream
+  //we schedule cancel() call after 5 seconds
   def example1() = {
-    val cancellableTick = Source.tick(0.seconds, 500.millis, ()).toMat(Sink.foreach(println))(Keep.left)
-    val cancelSignal = Source(1 to 5).throttle(1, 1.seconds, 1, ThrottleMode.shaping).toMat(Sink.ignore)(Keep.right)
-    val cancellable = cancellableTick.run
-    Await.result(cancelSignal.run.map(_ => cancellable.cancel()), Duration.Inf)
+    val cancellableTick = Source.tick(0.seconds, 500.millis, ()).toMat(Sink.foreach(println))(Keep.both)
+    val (cancellable, streamFuture) = cancellableTick.run
+    system.scheduler.scheduleOnce(5.seconds)(cancellable.cancel())
+    Await.result(streamFuture, Duration.Inf)
   }
 
   //counting words in a text file
