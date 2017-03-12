@@ -1,7 +1,7 @@
 package edu
 
-import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ThrottleMode}
+import akka.actor.{ActorSystem, PoisonPill, Status}
+import akka.stream.{ActorMaterializer, OverflowStrategy, ThrottleMode}
 import akka.stream.scaladsl.{Keep, Sink, Source}
 
 import scala.concurrent.Await
@@ -40,10 +40,21 @@ case class Lesson4(implicit val system: ActorSystem, materializer: ActorMaterial
     println(wordcounts.toSeq.sortBy(-_._2).take(100))
   }
 
+  def example3() = {
+    val source = Source.actorRef[Any](10, OverflowStrategy.dropHead)
+    val stream = source.collect{ case i: Int => i + 1 }.toMat(Sink.foreach(println))(Keep.both)
+    val (actorRef, future) = stream.run
+    actorRef ! 1
+    actorRef ! 2
+    actorRef ! 3
+    actorRef ! Status.Success
+    Await.result(future, 3.seconds)
+  }
+
   def call(example: Int) = example match {
     case 1 => example1()
     case 2 => example2()
-//    case 3 => exercise3()
+    case 3 => example3()
 //    case 4 => example4()
 //    case 5 => example5()
 //    case 6 => example6()
