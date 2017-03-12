@@ -15,6 +15,7 @@ object Main extends App {
     case 1 => Lesson1().call(example)
     case 2 => Lesson2().call(example)
     case 3 => Lesson3().call(example)
+    case 4 => Lesson4().call(example)
     case _ => "wrong lesson"
   }
 
