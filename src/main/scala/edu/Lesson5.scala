@@ -6,7 +6,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives
 import akka.stream.{ActorMaterializer, ThrottleMode}
-import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, Sink, Source}
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, Sink, Source}
 
 import scala.concurrent.duration._
 
@@ -67,11 +67,29 @@ case class Lesson5(implicit val system: ActorSystem, materializer: ActorMaterial
     bind(flow)
   }
 
+  //above flow with global state for all clients
+  //when you reset, you reset global counter
+  def example4() = {
+    val previousFlow = Flow[String]
+      .merge(Source.single("reset")) //artificial input to start the counter
+      .expand(s => Iterator(s) ++ Iterator.continually("")) //emitting received values + empty values in between
+      .throttle(1, 500.millis, 1, ThrottleMode.shaping) //tick
+      .scan(0) { case (count, input) => if(input == "") count + 1 else 0 } //state of the counter
+      .map(_.toString)
+    val (sink, source) =
+      MergeHub.source[String](perProducerBufferSize = 16)
+        .via(previousFlow)
+        .toMat(BroadcastHub.sink(bufferSize = 256))(Keep.both)
+        .run()
+    val flow = Flow.fromSinkAndSource(sink, source)
+    bind(flow)
+  }
+
   def call(example: Int) = example match {
     case 1 => example1()
     case 2 => example2()
     case 3 => example3()
-//    case 4 => example4()
+    case 4 => example4()
     case _ => println("wrong example")
   }
 }
