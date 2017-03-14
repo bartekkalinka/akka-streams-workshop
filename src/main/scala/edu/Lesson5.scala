@@ -6,7 +6,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives
 import akka.stream.{ActorMaterializer, ThrottleMode}
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, Sink, Source}
 
 import scala.concurrent.duration._
 
@@ -37,6 +37,8 @@ case class Lesson5(implicit val system: ActorSystem, materializer: ActorMaterial
 
   //sbt "run 5.1"
   //and then open http://localhost:9000/index.html in browser
+  //then, try to open same url in second tab
+  //compare counts
   def example1() = {
     val flow = Flow.fromSinkAndSource[String, String](
       Sink.ignore,
@@ -45,9 +47,17 @@ case class Lesson5(implicit val system: ActorSystem, materializer: ActorMaterial
     bind(flow)
   }
 
+  //open 2 clients after running this example
+  def example2() = {
+    val previousSource = Source.unfold(0)(i => Some(i + 1, i)).throttle(1, 500.millis, 1, ThrottleMode.shaping).map(_.toString)
+    val hubSource = previousSource.runWith(BroadcastHub.sink(bufferSize = 256))
+    val flow = Flow.fromSinkAndSource(Sink.ignore, hubSource)
+    bind(flow)
+  }
+
   def call(example: Int) = example match {
     case 1 => example1()
-//    case 2 => example2()
+    case 2 => example2()
 //    case 3 => example3()
 //    case 4 => example4()
     case _ => println("wrong example")
