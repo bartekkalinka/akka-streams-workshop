@@ -8,7 +8,6 @@ import akka.http.scaladsl.server.Directives
 import akka.stream.{ActorMaterializer, ThrottleMode}
 import akka.stream.scaladsl.{Flow, Sink, Source}
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
 
 case class Lesson5(implicit val system: ActorSystem, materializer: ActorMaterializer) extends Directives {
@@ -18,6 +17,7 @@ case class Lesson5(implicit val system: ActorSystem, materializer: ActorMaterial
         .collect { case TextMessage.Strict(msg) => msg }
         .via(flow)
         .map{ msg: String => TextMessage.Strict(msg) }
+
     pathSingleSlash {
       getFromResource("client/index.html")
     } ~
@@ -35,6 +35,8 @@ case class Lesson5(implicit val system: ActorSystem, materializer: ActorMaterial
     io.Source.stdin.getLines.hasNext
   }
 
+  //sbt "run 5.1"
+  //and then open http://localhost:9000/index.html in browser
   def example1() = {
     val flow = Flow.fromSinkAndSource[String, String](
       Sink.ignore,
