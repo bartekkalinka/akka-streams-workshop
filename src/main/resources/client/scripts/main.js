@@ -35,5 +35,9 @@ function onMessage(evt) {
 function onError(evt) {
 }
 function doSend(message) {
+    websocket.send(message);
+}
+function reset() {
+    doSend("reset");
 }
 init();
