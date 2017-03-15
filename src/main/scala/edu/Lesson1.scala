@@ -94,9 +94,6 @@ case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterial
     stream.run
   }
 
-  //TODO exercises
-
-
   def call(example: Int) = example match {
     case 1 => example1()
     case 2 => example2()
