@@ -101,7 +101,7 @@ case class Lesson2(implicit val system: ActorSystem, materializer: ActorMaterial
   }
 
   //exercise: use throttle to make stream ordered even with mapAsyncUnordered (in code from example8)
-  //run with sbt "run 2.11"
+  //run with sbt "run 2.10"
   def exercise10() = {
     //modify below code, add throttle:
     val stream: RunnableGraph[Future[Done]] = Source(List(3, 2, 1, 3, 2, 1)).mapAsyncUnordered(3)(callRemoteService).toMat(Sink.foreach(println))(Keep.right)
