@@ -80,13 +80,35 @@ case class Lesson3(implicit val system: ActorSystem, materializer: ActorMaterial
 
   //exercise: use Flow.buffer(3, OverflowStrategy.backpressure) to make both flows execute independently
   //(so the elements go to sink in order in which delays make them to)
-  def exercise3() = ???
+  def exercise3() =  {
+    //Creating source with graph dsl
+    //Reason: when we use asynchronous methods,
+    //it's neccessary to obtain Future[Done] materialization value.
+    //It's easy if we build Source separately and then use source.toMat(sink)
+    val source = Source.fromGraph(GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
+      import GraphDSL.Implicits._
+      val in = Source(1 to 3)
+
+      val bcast = builder.add(Broadcast[Int](2))
+      val merge = builder.add(Merge[Int](2))
+
+      //Flows use mapAsync
+      val flow1 = Flow[Int].mapAsync(1)(asyncCall(1))
+      val flow2 = Flow[Int].buffer(3, OverflowStrategy.backpressure).mapAsync(1)(asyncCall(4)) //Flow[Int].mapAsync(1)(asyncCall(1))
+
+      in ~> bcast ~> flow1 ~> merge
+      bcast ~> flow2 ~> merge
+      SourceShape(merge.out) //returning source shape this time, connected to Merge outlet
+    })
+    val graph: RunnableGraph[Future[Done]] = source.toMat(Sink.foreach(println))(Keep.right)
+    Await.result(graph.run, Duration.Inf)
+  }
 
   //Using alsoTo to broadcast one source to 2 sinks
   //The second sink will be Sink.last, which returns last value processed before completion.
   //To have access to materialization values we need to use alsoToMat version.
   def example4() = {
-    val graph: RunnableGraph[(Future[Int], Future[Done])] = Source(1 to 3)
+    val graph: RunnableGraph[(Future[Int], Future[Done])] = Source(1 to 30)
       .alsoToMat(Sink.last)(Keep.right)
       .toMat(Sink.foreach(println))(Keep.both) //Keep.both to keep both Sink.last and Sink.foreach materialization values
     val (futureLast, futureDone) = graph.run

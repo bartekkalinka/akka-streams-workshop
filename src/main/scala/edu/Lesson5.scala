@@ -47,7 +47,7 @@ case class Lesson5(implicit val system: ActorSystem, materializer: ActorMaterial
     bind(flow)
   }
 
-  //open 2 clients after running this example
+  //open 2 clients after running this example -> this does not allow to open new source
   def example2() = {
     val previousSource = Source.unfold(0)(i => Some(i + 1, i)).throttle(1, 500.millis, 1, ThrottleMode.shaping).map(_.toString)
     val hubSource = previousSource.runWith(BroadcastHub.sink(bufferSize = 256))
