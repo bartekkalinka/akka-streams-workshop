@@ -55,7 +55,8 @@ case class Lesson1(implicit val system: ActorSystem, materializer: ActorMaterial
     val stream2 = Source.repeat(1).take(5).to(Sink.foreach(println))
     val iterator = Iterator.from(1)
     val stream3 = Source.fromIterator(() => iterator).take(5).to(Sink.foreach(println))
-    val stream4 = Source.tick(0.seconds, 100.millis, "a").to(Sink.foreach(println))
+    //TODO to ponizej sie nie zatrzymuje
+    //    val stream4 = Source.tick(0.seconds, 100.millis, "a").toMat(Sink.foreach(println))(Keep.right)
     stream3.run
     //TODO run other streams, one at a time
   }
